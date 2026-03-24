@@ -141,7 +141,8 @@ def merge():
         upload_data = upload.json()
 
         if upload_data.get("status") == "ok":
-            direct_url = f"https://store1.gofile.io/download/direct/{upload_data['data']['fileId']}/short.mp4"
+            file_id = upload_data["data"]["id"]
+            direct_url = f"https://store1.gofile.io/download/direct/{file_id}/short.mp4"
             print(f"Success URL: {direct_url}", flush=True)
             return jsonify({"url": direct_url})
 

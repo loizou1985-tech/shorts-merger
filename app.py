@@ -9,7 +9,7 @@ app = Flask(__name__)
 
 MAX_SIZE_MB = 20
 REQUEST_TIMEOUT = 120
-OUTPUT_DURATION = 10
+OUTPUT_DURATION = 60
 
 
 def download_file(url, suffix):

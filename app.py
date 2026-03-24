@@ -19,21 +19,28 @@ def download_file(url, suffix):
     with requests.get(url, stream=True, timeout=REQUEST_TIMEOUT) as r:
         r.raise_for_status()
 
-        total = int(r.headers.get("content-length", 0))
-        print(f"Content-Length: {total}", flush=True)
+        content_length = int(r.headers.get("content-length", 0))
+        print(f"Content-Length: {content_length}", flush=True)
 
-        if total and total > MAX_SIZE_MB * 1024 * 1024:
-            raise Exception(f"File too large: {round(total / (1024 * 1024), 2)} MB")
+        if content_length and content_length > MAX_SIZE_MB * 1024 * 1024:
+            raise Exception(f"File too large: {round(content_length / (1024 * 1024), 2)} MB")
 
         tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+        written = 0
+
         try:
             for chunk in r.iter_content(chunk_size=1024 * 1024):
                 if chunk:
                     tmp.write(chunk)
+                    written += len(chunk)
         finally:
             tmp.close()
 
-    print(f"Saved to: {tmp.name}", flush=True)
+    print(f"Saved to: {tmp.name} ({written} bytes)", flush=True)
+
+    if written == 0:
+        raise Exception("Downloaded file is empty or invalid URL")
+
     return tmp.name
 
 
@@ -169,8 +176,16 @@ def merge():
         if upload_data.get("status") == "ok":
             file_id = upload_data["data"]["id"]
             direct_url = f"https://store1.gofile.io/download/direct/{file_id}/short.mp4"
-            print(f"Success URL: {direct_url}", flush=True)
-            return jsonify({"url": direct_url})
+            download_page = upload_data["data"]["downloadPage"]
+
+            print(f"Success direct URL: {direct_url}", flush=True)
+            print(f"Success download page: {download_page}", flush=True)
+
+            return jsonify({
+                "url": direct_url,
+                "downloadPage": download_page,
+                "fileId": file_id
+            })
 
         return jsonify({
             "error": "Upload failed",

@@ -10,7 +10,7 @@ app = Flask(__name__)
 
 MAX_SIZE_MB = 20
 REQUEST_TIMEOUT = 120
-OUTPUT_DURATION = 12
+OUTPUT_DURATION = 10
 
 
 def download_file(url, suffix):
@@ -84,16 +84,14 @@ def merge():
                 "-map", "0:v",
                 "-map", "[aout]",
                 "-t", str(OUTPUT_DURATION),
-                "-vf", "scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280",
+                "-vf", "scale=540:960:force_original_aspect_ratio=increase,crop=540:960",
                 "-c:v", "libx264",
-                "-preset", "medium",
-                "-crf", "23",
-                "-profile:v", "high",
-                "-level", "4.0",
+                "-preset", "ultrafast",
+                "-crf", "30",
                 "-pix_fmt", "yuv420p",
-                "-r", "30",
+                "-r", "24",
                 "-c:a", "aac",
-                "-b:a", "128k",
+                "-b:a", "96k",
                 "-ar", "44100",
                 "-movflags", "+faststart",
                 out_path,
@@ -107,16 +105,14 @@ def merge():
                 "-map", "0:v",
                 "-map", "1:a",
                 "-t", str(OUTPUT_DURATION),
-                "-vf", "scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280",
+                "-vf", "scale=540:960:force_original_aspect_ratio=increase,crop=540:960",
                 "-c:v", "libx264",
-                "-preset", "medium",
-                "-crf", "23",
-                "-profile:v", "high",
-                "-level", "4.0",
+                "-preset", "ultrafast",
+                "-crf", "30",
                 "-pix_fmt", "yuv420p",
-                "-r", "30",
+                "-r", "24",
                 "-c:a", "aac",
-                "-b:a", "128k",
+                "-b:a", "96k",
                 "-ar", "44100",
                 "-movflags", "+faststart",
                 out_path,

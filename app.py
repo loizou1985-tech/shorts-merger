@@ -57,6 +57,13 @@ def merge():
 
         video_path = download_file(video_url, ".mp4")
         music_path = download_file(music_url, ".mp3")
+
+        if not os.path.exists(video_path) or os.path.getsize(video_path) == 0:
+            return jsonify({"error": "Video file is empty"}), 400
+
+        if not os.path.exists(music_path) or os.path.getsize(music_path) == 0:
+            return jsonify({"error": "Music file is empty"}), 400
+
         out_path = f"/tmp/{uuid.uuid4()}.mp4"
 
         has_voice = bool(voice_url)
@@ -64,9 +71,11 @@ def merge():
         if has_voice:
             voice_path = download_file(voice_url, ".mp3")
 
+            if not os.path.exists(voice_path) or os.path.getsize(voice_path) == 0:
+                return jsonify({"error": "Voice file is empty"}), 400
+
             cmd = [
-                "ffmpeg",
-                "-y",
+                "ffmpeg", "-y",
                 "-i", video_path,
                 "-i", music_path,
                 "-i", voice_path,
@@ -77,18 +86,21 @@ def merge():
                 "-t", str(OUTPUT_DURATION),
                 "-vf", "scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280",
                 "-c:v", "libx264",
-                "-preset", "veryfast",
-                "-crf", "28",
+                "-preset", "medium",
+                "-crf", "23",
+                "-profile:v", "high",
+                "-level", "4.0",
+                "-pix_fmt", "yuv420p",
+                "-r", "30",
                 "-c:a", "aac",
-                "-b:a", "96k",
-                "-shortest",
+                "-b:a", "128k",
+                "-ar", "44100",
                 "-movflags", "+faststart",
                 out_path,
             ]
         else:
             cmd = [
-                "ffmpeg",
-                "-y",
+                "ffmpeg", "-y",
                 "-stream_loop", "-1",
                 "-i", video_path,
                 "-i", music_path,
@@ -97,11 +109,15 @@ def merge():
                 "-t", str(OUTPUT_DURATION),
                 "-vf", "scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280",
                 "-c:v", "libx264",
-                "-preset", "veryfast",
-                "-crf", "28",
+                "-preset", "medium",
+                "-crf", "23",
+                "-profile:v", "high",
+                "-level", "4.0",
+                "-pix_fmt", "yuv420p",
+                "-r", "30",
                 "-c:a", "aac",
-                "-b:a", "96k",
-                "-shortest",
+                "-b:a", "128k",
+                "-ar", "44100",
                 "-movflags", "+faststart",
                 out_path,
             ]
@@ -126,6 +142,9 @@ def merge():
                 "error": "ffmpeg failed",
                 "detail": result.stderr[-4000:]
             }), 500
+
+        if not os.path.exists(out_path) or os.path.getsize(out_path) < 100000:
+            return jsonify({"error": "Generated video is invalid"}), 500
 
         print("Uploading to GoFile...", flush=True)
         with open(out_path, "rb") as f:

@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 import subprocess
 import os
 import uuid
@@ -84,16 +84,17 @@ def merge():
                 "-map", "0:v",
                 "-map", "[aout]",
                 "-t", str(OUTPUT_DURATION),
-                "-vf", "scale=540:960:force_original_aspect_ratio=increase,crop=540:960",
+                "-vf", "scale=540:960:force_original_aspect_ratio=increase,crop=540:960,fps=24,format=yuv420p",
                 "-c:v", "libx264",
                 "-preset", "ultrafast",
-                "-crf", "30",
-                "-pix_fmt", "yuv420p",
-                "-r", "24",
-                "-c:a", "aac",
-                "-b:a", "96k",
-                "-ar", "44100",
+                "-crf", "28",
+                "-profile:v", "main",
+                "-level", "3.1",
                 "-movflags", "+faststart",
+                "-c:a", "aac",
+                "-b:a", "128k",
+                "-ar", "44100",
+                "-ac", "2",
                 out_path,
             ]
         else:
@@ -105,16 +106,17 @@ def merge():
                 "-map", "0:v",
                 "-map", "1:a",
                 "-t", str(OUTPUT_DURATION),
-                "-vf", "scale=540:960:force_original_aspect_ratio=increase,crop=540:960",
+                "-vf", "scale=540:960:force_original_aspect_ratio=increase,crop=540:960,fps=24,format=yuv420p",
                 "-c:v", "libx264",
                 "-preset", "ultrafast",
-                "-crf", "30",
-                "-pix_fmt", "yuv420p",
-                "-r", "24",
-                "-c:a", "aac",
-                "-b:a", "96k",
-                "-ar", "44100",
+                "-crf", "28",
+                "-profile:v", "main",
+                "-level", "3.1",
                 "-movflags", "+faststart",
+                "-c:a", "aac",
+                "-b:a", "128k",
+                "-ar", "44100",
+                "-ac", "2",
                 out_path,
             ]
 
@@ -142,29 +144,12 @@ def merge():
         if not os.path.exists(out_path) or os.path.getsize(out_path) < 100000:
             return jsonify({"error": "Generated video is invalid"}), 500
 
-        print("Uploading to GoFile...", flush=True)
-        with open(out_path, "rb") as f:
-            upload = requests.post(
-                "https://store1.gofile.io/uploadFile",
-                files={"file": ("short.mp4", f, "video/mp4")},
-                timeout=REQUEST_TIMEOUT
-            )
-
-        print(f"GoFile status: {upload.status_code}", flush=True)
-        print(f"GoFile response text: {upload.text[:2000]}", flush=True)
-
-        upload_data = upload.json()
-
-        if upload_data.get("status") == "ok":
-            file_id = upload_data["data"]["id"]
-            direct_url = f"https://store1.gofile.io/download/direct/{file_id}/short.mp4"
-            print(f"Success URL: {direct_url}", flush=True)
-            return jsonify({"url": direct_url})
-
-        return jsonify({
-            "error": "Upload failed",
-            "detail": upload_data
-        }), 500
+        return send_file(
+            out_path,
+            mimetype="video/mp4",
+            as_attachment=True,
+            download_name="short.mp4"
+        )
 
     except requests.RequestException as e:
         print("RequestException:", str(e), flush=True)

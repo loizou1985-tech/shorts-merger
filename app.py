@@ -65,7 +65,6 @@ def merge():
             return jsonify({"error": "Music file is empty"}), 400
 
         out_path = f"/tmp/{uuid.uuid4()}.mp4"
-
         has_voice = bool(voice_url)
 
         if has_voice:
@@ -84,17 +83,27 @@ def merge():
                 "-map", "0:v",
                 "-map", "[aout]",
                 "-t", str(OUTPUT_DURATION),
-                "-vf", "scale=540:960:force_original_aspect_ratio=increase,crop=540:960,fps=24,format=yuv420p",
+
+                # YouTube-friendlier video
+                "-vf", "scale=540:960:force_original_aspect_ratio=increase,crop=540:960,fps=30,format=yuv420p",
                 "-c:v", "libx264",
                 "-preset", "ultrafast",
                 "-crf", "28",
-                "-profile:v", "main",
-                "-level", "3.1",
+                "-profile:v", "high",
+                "-level", "4.0",
+                "-g", "15",
+                "-keyint_min", "15",
+                "-sc_threshold", "0",
+                "-bf", "2",
+                "-pix_fmt", "yuv420p",
                 "-movflags", "+faststart",
+
+                # YouTube-friendlier audio
                 "-c:a", "aac",
                 "-b:a", "128k",
-                "-ar", "44100",
+                "-ar", "48000",
                 "-ac", "2",
+
                 out_path,
             ]
         else:
@@ -106,17 +115,27 @@ def merge():
                 "-map", "0:v",
                 "-map", "1:a",
                 "-t", str(OUTPUT_DURATION),
-                "-vf", "scale=540:960:force_original_aspect_ratio=increase,crop=540:960,fps=24,format=yuv420p",
+
+                # YouTube-friendlier video
+                "-vf", "scale=540:960:force_original_aspect_ratio=increase,crop=540:960,fps=30,format=yuv420p",
                 "-c:v", "libx264",
                 "-preset", "ultrafast",
                 "-crf", "28",
-                "-profile:v", "main",
-                "-level", "3.1",
+                "-profile:v", "high",
+                "-level", "4.0",
+                "-g", "15",
+                "-keyint_min", "15",
+                "-sc_threshold", "0",
+                "-bf", "2",
+                "-pix_fmt", "yuv420p",
                 "-movflags", "+faststart",
+
+                # YouTube-friendlier audio
                 "-c:a", "aac",
                 "-b:a", "128k",
-                "-ar", "44100",
+                "-ar", "48000",
                 "-ac", "2",
+
                 out_path,
             ]
 

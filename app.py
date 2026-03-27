@@ -11,9 +11,9 @@ MAX_SIZE_MB = 30
 REQUEST_TIMEOUT = 180
 OUTPUT_DURATION = 60
 
-ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY", "YOUR_ELEVENLABS_API_KEY")
-ELEVENLABS_VOICE_ID = os.environ.get("ELEVENLABS_VOICE_ID", "YOUR_ELEVENLABS_VOICE_ID")
-ELEVENLABS_MODEL_ID = os.environ.get("ELEVENLABS_MODEL_ID", "eleven_multilingual_v2")
+ELEVENLABS_API_KEY = os.environ.get("7a9beb0f2258a67eb7986502e89af8fd6dcc7891a78524c07f65cc614327d1fb", "YOUR_ELEVENLABS_API_KEY")
+ELEVENLABS_VOICE_ID = os.environ.get("uhYnkYTBc711oAY590Ea", "YOUR_ELEVENLABS_VOICE_ID")
+ELEVENLABS_MODEL_ID = os.environ.get("eleven_multilingual_v2", "eleven_multilingual_v2")
 
 
 def download_file(url, suffix):

@@ -11,6 +11,7 @@ MAX_SIZE_MB = 30
 REQUEST_TIMEOUT = 180
 OUTPUT_DURATION = 60
 
+# You can hardcode for testing, or replace with env vars later.
 ELEVENLABS_API_KEY = "YOUR_REAL_ELEVENLABS_API_KEY"
 ELEVENLABS_VOICE_ID = "uhYnkYTBc711oAY590Ea"
 ELEVENLABS_MODEL_ID = "eleven_multilingual_v2"
@@ -26,7 +27,9 @@ def download_file(url, suffix):
         print(f"Content-Length: {content_length}", flush=True)
 
         if content_length and content_length > MAX_SIZE_MB * 1024 * 1024:
-            raise Exception(f"File too large: {round(content_length / (1024 * 1024), 2)} MB")
+            raise Exception(
+                f"File too large: {round(content_length / (1024 * 1024), 2)} MB"
+            )
 
         tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
         written = 0
@@ -69,7 +72,12 @@ def generate_voice_file(text):
     }
 
     print("Generating ElevenLabs voiceover...", flush=True)
-    response = requests.post(url, headers=headers, json=payload, timeout=REQUEST_TIMEOUT)
+    response = requests.post(
+        url,
+        headers=headers,
+        json=payload,
+        timeout=REQUEST_TIMEOUT,
+    )
     response.raise_for_status()
 
     voice_path = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3").name
@@ -79,21 +87,36 @@ def generate_voice_file(text):
     if not os.path.exists(voice_path) or os.path.getsize(voice_path) == 0:
         raise Exception("Generated voice file is empty")
 
-    print(f"Voice saved to: {voice_path} ({os.path.getsize(voice_path)} bytes)", flush=True)
+    print(
+        f"Voice saved to: {voice_path} ({os.path.getsize(voice_path)} bytes)",
+        flush=True,
+    )
     return voice_path
 
 
 def upload_to_gofile(file_path):
-    print("Uploading to GoFile...", flush=True)
+    print("Getting GoFile server...", flush=True)
+
+    server_res = requests.get("https://api.gofile.io/getServer", timeout=REQUEST_TIMEOUT)
+    server_res.raise_for_status()
+    server_data = server_res.json()
+
+    if server_data.get("status") != "ok":
+        raise Exception(f"Failed to get GoFile server: {server_data}")
+
+    server = server_data["data"]["server"]
+    upload_url = f"https://{server}.gofile.io/uploadFile"
+
+    print(f"Uploading to: {upload_url}", flush=True)
 
     with open(file_path, "rb") as f:
         upload = requests.post(
-            "https://store1.gofile.io/uploadFile",
+            upload_url,
             files={"file": ("short.mp4", f, "video/mp4")},
             timeout=REQUEST_TIMEOUT,
         )
 
-    print(f"GoFile status: {upload.status_code}", flush=True)
+    print(f"GoFile upload status: {upload.status_code}", flush=True)
     print(f"GoFile response text: {upload.text[:2000]}", flush=True)
 
     if upload.status_code != 200:
@@ -171,7 +194,9 @@ def merge():
             "-map", "0:v",
             "-map", "[aout]",
             "-t", str(OUTPUT_DURATION),
-            "-vf", "scale=540:960:force_original_aspect_ratio=increase,crop=540:960,fps=30,format=yuv420p",
+            "-vf",
+            "scale=540:960:force_original_aspect_ratio=increase,"
+            "crop=540:960,fps=30,format=yuv420p",
             "-c:v", "libx264",
             "-preset", "ultrafast",
             "-crf", "28",
@@ -257,6 +282,15 @@ def root():
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({"status": "ok"})
+
+
+@app.route("/debug-env", methods=["GET"])
+def debug_env():
+    return jsonify({
+        "has_api_key": bool(ELEVENLABS_API_KEY),
+        "voice_id": ELEVENLABS_VOICE_ID,
+        "model_id": ELEVENLABS_MODEL_ID,
+    })
 
 
 if __name__ == "__main__":

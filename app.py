@@ -11,9 +11,9 @@ MAX_SIZE_MB = 30
 REQUEST_TIMEOUT = 180
 OUTPUT_DURATION = 60
 
-ELEVENLABS_API_KEY = "YOUR_ELEVENLABS_API_KEY"
-ELEVENLABS_VOICE_ID = "YOUR_ELEVENLABS_VOICE_ID"
-ELEVENLABS_MODEL_ID = "eleven_multilingual_v2"
+ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY", "YOUR_ELEVENLABS_API_KEY")
+ELEVENLABS_VOICE_ID = os.environ.get("ELEVENLABS_VOICE_ID", "YOUR_ELEVENLABS_VOICE_ID")
+ELEVENLABS_MODEL_ID = os.environ.get("ELEVENLABS_MODEL_ID", "eleven_multilingual_v2")
 
 
 def download_file(url, suffix):
@@ -26,9 +26,7 @@ def download_file(url, suffix):
         print(f"Content-Length: {content_length}", flush=True)
 
         if content_length and content_length > MAX_SIZE_MB * 1024 * 1024:
-            raise Exception(
-                f"File too large: {round(content_length / (1024 * 1024), 2)} MB"
-            )
+            raise Exception(f"File too large: {round(content_length / (1024 * 1024), 2)} MB")
 
         tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
         written = 0
@@ -53,24 +51,25 @@ def generate_voice_file(text):
     if not text or not text.strip():
         raise Exception("Voice script is empty")
 
+    if not ELEVENLABS_API_KEY or ELEVENLABS_API_KEY == "YOUR_ELEVENLABS_API_KEY":
+        raise Exception("ELEVENLABS_API_KEY is not configured")
+
+    if not ELEVENLABS_VOICE_ID or ELEVENLABS_VOICE_ID == "YOUR_ELEVENLABS_VOICE_ID":
+        raise Exception("ELEVENLABS_VOICE_ID is not configured")
+
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{ELEVENLABS_VOICE_ID}"
     headers = {
         "xi-api-key": ELEVENLABS_API_KEY,
         "Content-Type": "application/json",
-        "Accept": "audio/mpeg"
+        "Accept": "audio/mpeg",
     }
     payload = {
         "text": text,
-        "model_id": ELEVENLABS_MODEL_ID
+        "model_id": ELEVENLABS_MODEL_ID,
     }
 
     print("Generating ElevenLabs voiceover...", flush=True)
-    response = requests.post(
-        url,
-        headers=headers,
-        json=payload,
-        timeout=REQUEST_TIMEOUT
-    )
+    response = requests.post(url, headers=headers, json=payload, timeout=REQUEST_TIMEOUT)
     response.raise_for_status()
 
     voice_path = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3").name
@@ -80,10 +79,7 @@ def generate_voice_file(text):
     if not os.path.exists(voice_path) or os.path.getsize(voice_path) == 0:
         raise Exception("Generated voice file is empty")
 
-    print(
-        f"Voice saved to: {voice_path} ({os.path.getsize(voice_path)} bytes)",
-        flush=True
-    )
+    print(f"Voice saved to: {voice_path} ({os.path.getsize(voice_path)} bytes)", flush=True)
     return voice_path
 
 
@@ -94,7 +90,7 @@ def upload_to_gofile(file_path):
         upload = requests.post(
             "https://store1.gofile.io/uploadFile",
             files={"file": ("short.mp4", f, "video/mp4")},
-            timeout=REQUEST_TIMEOUT
+            timeout=REQUEST_TIMEOUT,
         )
 
     print(f"GoFile status: {upload.status_code}", flush=True)
@@ -122,7 +118,7 @@ def upload_to_gofile(file_path):
     return {
         "downloadPage": download_page,
         "directLink": direct_link,
-        "raw": upload_data
+        "raw": upload_data,
     }
 
 
@@ -142,14 +138,10 @@ def merge():
         voice_script = data.get("voice_script", "")
 
         if not video_url or not music_url:
-            return jsonify({
-                "error": "video_url and music_url are required"
-            }), 400
+            return jsonify({"error": "video_url and music_url are required"}), 400
 
         if not voice_script or not voice_script.strip():
-            return jsonify({
-                "error": "voice_script is required"
-            }), 400
+            return jsonify({"error": "voice_script is required"}), 400
 
         video_path = download_file(video_url, ".mp4")
         music_path = download_file(music_url, ".mp3")
@@ -179,8 +171,7 @@ def merge():
             "-map", "0:v",
             "-map", "[aout]",
             "-t", str(OUTPUT_DURATION),
-            "-vf", "scale=540:960:force_original_aspect_ratio=increase,"
-                   "crop=540:960,fps=30,format=yuv420p",
+            "-vf", "scale=540:960:force_original_aspect_ratio=increase,crop=540:960,fps=30,format=yuv420p",
             "-c:v", "libx264",
             "-preset", "ultrafast",
             "-crf", "28",
@@ -205,7 +196,7 @@ def merge():
             cmd,
             capture_output=True,
             text=True,
-            timeout=300
+            timeout=300,
         )
 
         print(f"FFmpeg return code: {result.returncode}", flush=True)
@@ -217,7 +208,7 @@ def merge():
         if result.returncode != 0:
             return jsonify({
                 "error": "ffmpeg failed",
-                "detail": result.stderr[-4000:]
+                "detail": result.stderr[-4000:],
             }), 500
 
         if not os.path.exists(out_path) or os.path.getsize(out_path) < 100000:
@@ -228,7 +219,7 @@ def merge():
         return jsonify({
             "success": True,
             "downloadPage": upload_result["downloadPage"],
-            "directLink": upload_result["directLink"]
+            "directLink": upload_result["directLink"],
         })
 
     except requests.RequestException as e:
@@ -236,7 +227,7 @@ def merge():
         print(traceback.format_exc(), flush=True)
         return jsonify({
             "error": "Download/upload request failed",
-            "detail": str(e)
+            "detail": str(e),
         }), 500
 
     except subprocess.TimeoutExpired:
